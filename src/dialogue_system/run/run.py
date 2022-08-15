@@ -139,6 +139,12 @@ parser.add_argument("--label_all_model_path", dest="label_all_model_path", type=
 parser.add_argument("--initial_symptom", dest="initial_symptom", type=boolean_string, default=False, help="whether use initial symptom in HRL")
 parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="model/DQN/checkpoint", help="Saved Model")
 
+parser.add_argument("--introspect_enabled", dest="introspect_enabled", type=boolean_string, default=False, help="whether use introspection")
+parser.add_argument("--initial_threshold", dest="initial_threshold", type=float, default=0.45, help="whether use introspection")
+parser.add_argument("--polyak", dest="polyak", type=float, default=0.95, help="")
+
+parser.add_argument("--worker_kg_enabled", dest="worker_kg_enabled", type=boolean_string, default=False)
+
 
 args = parser.parse_args()
 parameter = vars(args)
@@ -153,7 +159,6 @@ def run(parameter):
 
     """
     #print(json.dumps(parameter, indent=2))
-    time.sleep(2)
     slot_set = pickle.load(file=open(parameter["slot_set"], "rb"))
     action_set = pickle.load(file=open(parameter["action_set"], "rb"))
     disease_symptom = pickle.load(file=open(parameter["disease_symptom"], "rb"))
