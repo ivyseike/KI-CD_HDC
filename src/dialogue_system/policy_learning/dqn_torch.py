@@ -619,10 +619,10 @@ class DQN2(object):
             episodes_index (int): the current step of training. And this will be appended to the model name at the end.
             checkpoint_path (str): the directory that the model is going to save to. Default None.
         """
-        if os.path.isdir(checkpoint_path) == False:
-            # os.mkdir(checkpoint_path)
-            #print(os.getcwd())
-            os.makedirs(checkpoint_path)
+        # if os.path.isdir(checkpoint_path) == False:
+        #     # os.mkdir(checkpoint_path)
+        #     #print(os.getcwd())
+        #     os.makedirs(checkpoint_path)
         agent_id = self.params.get("agent_id").lower()
         disease_number = self.params.get("disease_number")
         success_rate = model_performance["success_rate"]

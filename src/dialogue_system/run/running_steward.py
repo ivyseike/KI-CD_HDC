@@ -96,7 +96,15 @@ class RunningSteward(object):
                 writer.add_scalar('result/ave_turns', torch.tensor(result['average_turn'], device=device), index)
                 writer.add_scalar('result/ave_match_rate', torch.tensor(result['average_match_rate'], device=device), index)
                 writer.add_scalar('result/ave_match_rate2', torch.tensor(result['average_match_rate2'], device=device), index)
+                if self.parameter['introspect_enabled']:
+                    writer.add_scalar('result/introspected', torch.tensor(self.dialogue_manager.introspected, device=device), index)
+                    if index % 200 == 0 and index != 0:
+                        t1, t2 = self.dialogue_manager.update_threshold()
+                    else:
+                        t1, t2 = self.parameter['initial_threshold_master'], self.parameter['initial_threshold_worker']
 
+                    writer.add_scalar('result/threshold_m', torch.tensor(t1, device=device), index/200)
+                    writer.add_scalar('result/threshold_w', torch.tensor(t2, device=device), index/200)
 
             result = self.evaluate_model(dataset="train", index=index)
 
@@ -105,10 +113,10 @@ class RunningSteward(object):
                 self.dialogue_manager.state_tracker.agent.flush_pool()
                 self.simulation_epoch(epoch_size=self.epoch_size, index=index)
                 if save_model is True:
-                    self.dialogue_manager.state_tracker.agent.save_model(model_performance=result, episodes_index = index, checkpoint_path=self.checkpoint_path)
+                    self.dialogue_manager.state_tracker.agent.save_model(model_performance=result, episodes_index = index, checkpoint_path=self.checkpoint_path+"/"+self.parameter["run_info"])
                     if self.parameter.get("agent_id").lower() in ["agenthrljoint", "agenthrljoint2",'agentdqn']:
                         self.dialogue_manager.save_dl_model(model_performance=result, episodes_index=index,
-                                                            checkpoint_path=self.checkpoint_path)
+                                                            checkpoint_path=self.checkpoint_path+"/"+self.parameter["run_info"])
                     print("###########################The model was saved.###################################")
                 else:
                     pass
@@ -120,8 +128,8 @@ class RunningSteward(object):
             self.dialogue_manager.state_tracker.agent.save_model(model_performance=result, episodes_index=index, checkpoint_path=self.checkpoint_path)
             if self.parameter.get("agent_id").lower() in ["agenthrljoint2"]:
                 self.dialogue_manager.save_dl_model(model_performance=result, episodes_index=index, checkpoint_path=self.checkpoint_path)
-        if save_performance is True and train_mode is True and epoch_number > 0:
-            self.__dump_performance__(epoch_index=index)
+        # if save_performance is True and train_mode is True and epoch_number > 0:
+        #     self.__dump_performance__(epoch_index=index)
 
 
 
@@ -272,8 +280,8 @@ class RunningSteward(object):
             #self.dialogue_manager.train_machine_learning_classifier(epochs=20)
         res['DiseaseClassifier_Accuracy'] = acc
 
-        if index % 1000 == 999 and save_performance == True:
-            self.__dump_performance__(epoch_index=index)
+        # if index % 1000 == 999 and save_performance == True:
+        #     self.__dump_performance__(epoch_index=index)
         print("%3d simulation SR [%s], ave reward %s, ave turns %s, ave match rate %s, ave match rate2 %s, ave repeated %s" % (index,res['success_rate'],res['average_reward'], res['average_turn'], res["average_match_rate"],res[ "average_match_rate2"],res["average_repeated_action"]))
 
         if self.parameter.get("use_all_labels") == True and self.parameter.get("disease_as_action") == False:

@@ -10,6 +10,8 @@ import numpy as np
 from collections import deque
 import sys, os
 import json
+import torch
+import math
 
 
 sys.path.append(os.getcwd().replace("src/dialogue_system/dialogue_manager",""))
@@ -49,6 +51,15 @@ class DialogueManager_HRL(object):
         self.disease_symptom = pickle.load(open(self.parameter.get("disease_symptom"),'rb'))
         self.dsg = pickle.load(open(self.parameter.get("dsg"),'rb')) #Disease Symptom
 
+        self.introspect_enabled = parameter["introspect_enabled"]
+        self.dynamic_threshold_master = parameter["initial_threshold_master"]
+        self.dynamic_threshold_worker = parameter["initial_threshold_worker"]
+        self.polyak = parameter["polyak"]
+        self.threshold_history_master = 0
+        self.threshold_history_worker = 0
+        self.update_count = 0
+        self.introspected = 0
+
 
         self.slot_set.pop('disease')
         self.grp = [1,4,5,6,7,12,13,14,19]
@@ -82,6 +93,41 @@ class DialogueManager_HRL(object):
             self.master_index_by_group = []
             self.symptom_by_group = {x: [0,0] for x in ['12', '13', '14', '19', '1', '4', '5', '6', '7']}
 
+    def update_threshold(self):
+        self.dynamic_threshold_master = self.polyak * self.dynamic_threshold_master + (1 - self.polyak) * (self.threshold_history_master / self.update_count)
+        self.dynamic_threshold_worker = self.polyak * self.dynamic_threshold_worker + (1 - self.polyak) * (self.threshold_history_worker / self.update_count)
+        self.threshold_history_master = 0
+        self.threshold_history_worker = 0
+        self.update_count = 0
+        return self.dynamic_threshold_master, self.dynamic_threshold_worker
+
+    def calculate_entropy(self, distribution):
+        e = 0
+        with torch.no_grad():
+            for i in range(0, distribution.shape[1]):
+                e += -distribution[0][i].item() * math.log10(distribution[0][i].item())
+
+        return e
+
+    def introspect(self, state, disease):
+        #once the action is repeated or the dialogue reach the max turn, then the classifier will output the predicted disease
+        state_repA = self.current_state_representation(state)
+        Ys, pre_grp = self.modelG.predict([state_repA])
+        e1 = self.calculate_entropy(Ys)
+        inde = pre_grp[0]
+        pre_grp_l = self.grp[inde]
+        Ys2, pre_disease = self.dd(state,pre_grp_l)
+        e2 = self.calculate_entropy(Ys2)
+        ind = self.grp.index(pre_grp_l)
+        did = ind*10 + pre_disease[0]
+
+        if self.disease2id[disease] == did:
+            self.update_count += 1
+            self.threshold_history_master += e1
+            self.threshold_history_worker += e2
+
+        return e1 < self.dynamic_threshold_master and e2 < self.dynamic_threshold_worker
+
     def next(self, greedy_strategy, save_record, index):
         """
         The next two turn of this dialogue session. The agent will take action first and then followed by user simulator.
@@ -92,71 +138,38 @@ class DialogueManager_HRL(object):
         """
         # Agent takes action.
         lower_reward = 0
-        #self.p = 0
-        #self.hc = 0
-        # gamma = self.parameter.get("gamma")
-        #probable_slot = []
-        # state = self.state_tracker.get_state()
-        # state_rep = self.current_state_representation(state)
-        #Y, pre_grp = self.modelG.predict([state_rep])
-        #Y = Y.data.cpu().numpy()[0]
-        #print('Group Prediction Probabaility:',Y)
-        #prob_grp = max(Y)
-        #inde = pre_grp[0]
-        #pre_grp_l = self.grp[inde]
-        #print('Predicted Grp:',pre_grp_l,'with probability : ',prob_grp)
-        #Ys, pre_disease = self.dd(state,pre_grp_l)
-        #kk = Ys.data.cpu().numpy()[0]
-        #diease_prob = max(kk)
-        # if prob_grp>=0.35:
-        #     self.state_tracker.state_updateG(pre_grp_l,prob_grp)
-        #
-        # if(prob_grp >0.35 and diease_prob>0.5):
-        #     g = int(pre_grp_l)
-        #     ind = self.grp.index(g)
-        #     did = ind*10 + pre_disease[0]
-        #     d = self.id2disease[did]
-        #     for j in range(0,9):
-        #         if d in list(self.GTD[self.grp[j]].keys()):
-        #             break;
-        #     assert j == inde
-        #     print('Current Probable Diease: ',d)
-        #     print('Diease probability: ',diease_prob)
-        #     probable_slot = self.GTD[self.grp[j]][d]
-        #     print('Probable Slolts : ',probable_slot)
-        #     imp_sym = self.Dtop5Sym(probable_slot,self.grp[j])
-        #     print('Important Slot:',imp_sym)
-        #     self.state_tracker.ProbableSymUpdate(did,diease_prob,imp_sym)
 
         state = self.state_tracker.get_state()
         group_id = self.state_tracker.user.goal["group_id"]
 
-        if self.parameter.get("agent_id")=='agentdqn':
-            self.master_action_space = self.state_tracker.agent.action_space
-        else:
-            self.master_action_space = self.state_tracker.agent.master_action_space
+        self.master_action_space = self.state_tracker.agent.master_action_space
         #if self.state_tracker.agent.subtask_terminal:
         #    self.master_state = copy.deepcopy(state)
-        if self.parameter.get("agent_id") == 'agentdqn':
-            master_action_index = len(self.master_action_space)
-            agent_action,  lower_action_index = self.state_tracker.agent.next(state=state, turn=self.state_tracker.turn,
-                                                                                            greedy_strategy=greedy_strategy,
-                                                                        index=index)
-            #print('Agent Action:',agent_action)
-            #print('Lower_action_index:',lower_action_index)
-        else:
-            agent_action, master_action_index, lower_action_index = self.state_tracker.agent.next(state=state, turn=self.state_tracker.turn,greedy_strategy=greedy_strategy, index=index)
-            if len(list(agent_action["request_slots"].keys())):
-                lower_action = list(agent_action["request_slots"].keys())[0]
-                if lower_action in self.lower_action_history:
-                    self.state_tracker.repeatition()
+        # if self.parameter.get("agent_id") == 'agentdqn':
+        #     master_action_index = len(self.master_action_space)
+        #     agent_action,  lower_action_index = self.state_tracker.agent.next(state=state, turn=self.state_tracker.turn,
+        #                                                                                     greedy_strategy=greedy_strategy,
+        #                                                                 index=index)
+        #     #print('Agent Action:',agent_action)
+        #     #print('Lower_action_index:',lower_action_index)
+        # else:
+        agent_action, master_action_index, lower_action_index = self.state_tracker.agent.next(state=state, turn=self.state_tracker.turn,greedy_strategy=greedy_strategy, index=index)
 
+        action_type = None
+        disease = self.state_tracker.user.goal["disease_tag"]
+
+        if len(list(agent_action["request_slots"].keys())):
+            action_type = "symptom"
+            lower_action = list(agent_action["request_slots"].keys())[0]
+            if self.introspect_enabled and self.introspect(state, disease):
+                self.introspected += 1
+                action_type = "disease"
+                agent_action = self.state_tracker.agent.revert_next(turn=self.state_tracker.turn)
+            elif lower_action in self.lower_action_history:
+                self.state_tracker.repeatition()
             # print('Master action index:',master_action_index)
             # print('Lower action index: ',lower_action_index)
             # print('Agent Action:',agent_action)
-        if len(agent_action["request_slots"]) > 0:
-            assert len(list(agent_action["request_slots"].keys())) == 1
-            action_type = "symptom"
         elif len(agent_action["inform_slots"]) > 0:
             lower_action = list(agent_action["inform_slots"].keys())[0]
             assert len(list(agent_action["inform_slots"].keys()))==1
@@ -223,32 +236,22 @@ class DialogueManager_HRL(object):
         user_action, reward, episode_over, dialogue_status = self.state_tracker.user.next(agent_action=agent_action,turn=self.state_tracker.turn)
         # print('User Action:',user_action)
         # print('dialogue status:',dialogue_status)
-        if len(agent_action["request_slots"]) > 0:
-            # if(prob_grp >0.4):
-            #     Ys, pre_disease = self.dd(state,pre_grp_l)
-            #     dp = max(Ys.data.cpu().numpy()[0])
-            #     g = int(pre_grp_l)
-            #     ind = self.grp.index(g)
-            #     did = ind*10 + pre_disease[0]
-            #     d = self.id2disease[did]
-            #     for j in range(0,9):
-            #         if d in list(self.GTD[self.grp[j]].keys()):
-            #             break;
-            #
-            #
-            #
-            #     probable_slot = self.GTD[self.grp[j]][d]
-            #     print('Probable diease: ',d)
-            #     print('Probable symptom: ', probable_slot)
-            lower_action = list(agent_action["request_slots"].keys())[0]
+        # if len(agent_action["request_slots"]) > 0:
+        #     # if(prob_grp >0.4):
+        #     #     Ys, pre_disease = self.dd(state,pre_grp_l)
+        #     #     dp = max(Ys.data.cpu().numpy()[0])
+        #     #     g = int(pre_grp_l)
+        #     #     ind = self.grp.index(g)
+        #     #     did = ind*10 + pre_disease[0]
+        #     #     d = self.id2disease[did]
+        #     #     for j in range(0,9):
+        #     #         if d in list(self.GTD[self.grp[j]].keys()):
+        #     #             break;
+        #     #     probable_slot = self.GTD[self.grp[j]][d]
+        #     #     print('Probable diease: ',d)
+        #     #     print('Probable symptom: ', probable_slot)
+        #     lower_action = list(agent_action["request_slots"].keys())[0]
 
-
-
-
-
-
-
-            lower_action = list(agent_action["request_slots"].keys())[0]
             # if len(probable_slot) and lower_action in probable_slot:
             #     self.p = 1
             # elif len(probable_slot) and (list(user_action['inform_slots'].values())[0] != True) and lower_action not in probable_slot:
@@ -282,60 +285,60 @@ class DialogueManager_HRL(object):
         if master_action_index < len(self.master_action_space):
             self.master_action_history.append(self.master_action_space[master_action_index])
 
-        if  self.parameter.get("initial_symptom"):
-            #print(master_action_index)
-            if self.master_action_space[master_action_index] == group_id and self.state_tracker.get_state()["turn"]==2:
-                reward = self.parameter.get("reward_for_success")
-                self.group_id_match += 1
-            elif episode_over == True:
-                reward = reward/2
-            else:
-                reward = 0
-        elif self.parameter.get("use_all_labels") and episode_over==True:
-            #if self.master_action_space[master_action_index] == group_id and action_type == "disease":
-            #    reward = self.parameter.get("reward_for_success")
-            #else:
-            #    reward = 0
-            if self.parameter.get("agent_id").lower() == "agenthrlnew" and self.parameter.get("disease_as_action")==True:
-                if self.master_action_space[master_action_index] == group_id and action_type == "disease" and reward!=self.parameter.get("reward_for_success"):
-                    reward = self.parameter.get("reward_for_success")/2
-            elif self.parameter.get("agent_id").lower() == "agenthrlnew" and self.parameter.get("disease_as_action") == False:
-                if action_type=="disease" and master_action_index<len(self.master_action_space):
-                    reward = self.parameter.get("reward_for_repeated_action")
-                    self.repeated_action_count +=1
-                    dialogue_status = dialogue_configuration.DIALOGUE_STATUS_FAILED
-                    #print("#############")
+        # if  self.parameter.get("initial_symptom"):
+        #     #print(master_action_index)
+        #     if self.master_action_space[master_action_index] == group_id and self.state_tracker.get_state()["turn"]==2:
+        #         reward = self.parameter.get("reward_for_success")
+        #         self.group_id_match += 1
+        #     elif episode_over == True:
+        #         reward = reward/2
+        #     else:
+        #         reward = 0
+        # elif self.parameter.get("use_all_labels") and episode_over==True:
+        #     #if self.master_action_space[master_action_index] == group_id and action_type == "disease":
+        #     #    reward = self.parameter.get("reward_for_success")
+        #     #else:
+        #     #    reward = 0
+        #     if self.parameter.get("agent_id").lower() == "agenthrlnew" and self.parameter.get("disease_as_action")==True:
+        #         if self.master_action_space[master_action_index] == group_id and action_type == "disease" and reward!=self.parameter.get("reward_for_success"):
+        #             reward = self.parameter.get("reward_for_success")/2
+        #     elif self.parameter.get("agent_id").lower() == "agenthrlnew" and self.parameter.get("disease_as_action") == False:
+        #         if action_type=="disease" and master_action_index<len(self.master_action_space):
+        #             reward = self.parameter.get("reward_for_repeated_action")
+        #             self.repeated_action_count +=1
+        #             dialogue_status = dialogue_configuration.DIALOGUE_STATUS_FAILED
+        #             #print("#############")
 
-            elif self.parameter.get("agent_id").lower() == "agenthrlnew2":
-                if action_type=="disease" and master_action_index<len(self.master_action_space):
-                    reward = self.parameter.get("reward_for_repeated_action")
-                    self.repeated_action_count +=1
+        #     elif self.parameter.get("agent_id").lower() == "agenthrlnew2":
+        #         if action_type=="disease" and master_action_index<len(self.master_action_space):
+        #             reward = self.parameter.get("reward_for_repeated_action")
+        #             self.repeated_action_count +=1
 
 
-                    #reward = -33
-                    #print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+        #             #reward = -33
+        #             #print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
 
-        if action_type=="symptom"  and self.parameter.get("agent_id").lower() == "agenthrljoint" and self.parameter.get("disease_as_action") == False:
-            #print('##############')
-            #if master_action_index==9:
-            #    print(master_action_index)  通过action_type的筛选已经去除了master_action_index为9的情形
-            self.acc_by_group[group_id][2] += 1
-            if self.master_action_space[master_action_index] == group_id:
-                #reward = 10
-                self.acc_by_group[group_id][1] += 1
-                if self.lower_reward_function(state=state, next_state=self.state_tracker.get_state()) > 0:
-                    self.acc_by_group[group_id][0] += 1
-            #else:
-            #    reward = -1
+        # if action_type=="symptom"  and self.parameter.get("agent_id").lower() == "agenthrljoint" and self.parameter.get("disease_as_action") == False:
+        #     #print('##############')
+        #     #if master_action_index==9:
+        #     #    print(master_action_index)  通过action_type的筛选已经去除了master_action_index为9的情形
+        #     self.acc_by_group[group_id][2] += 1
+        #     if self.master_action_space[master_action_index] == group_id:
+        #         #reward = 10
+        #         self.acc_by_group[group_id][1] += 1
+        #         if self.lower_reward_function(state=state, next_state=self.state_tracker.get_state()) > 0:
+        #             self.acc_by_group[group_id][0] += 1
+        #     #else:
+        #     #    reward = -1
 
-            alpha = 88
-            if lower_action in self.action_history:
-                # print('Penalized for lower action reapeatition  :')
-                lower_reward = -alpha
-            else:
-                lower_reward1 = alpha * self.lower_reward_function(state=state, next_state=self.state_tracker.get_state())
-                lower_reward = max(0, lower_reward1)
-                reward = lower_reward
+        #     alpha = 88
+        #     if lower_action in self.action_history:
+        #         # print('Penalized for lower action reapeatition  :')
+        #         lower_reward = -alpha
+        #     else:
+        #         lower_reward1 = alpha * self.lower_reward_function(state=state, next_state=self.state_tracker.get_state())
+        #         lower_reward = max(0, lower_reward1)
+        #         reward = lower_reward
 
         if self.parameter.get('agent_id').lower()=='agenthrljoint2' and lower_action in self.lower_action_history:
             # print('Penalized for lower action repeatition')
@@ -385,16 +388,16 @@ class DialogueManager_HRL(object):
                     lower_reward = lower_reward
                 )
             else:
-                if self.parameter.get("initial_symptom") is False or self.state_tracker.get_state()["turn"]==2:
-                    self.record_training_sample(
-                        state=state,
-                        agent_action=lower_action_index,
-                        next_state=self.state_tracker.get_state(),
-                        reward=reward,
-                        episode_over=episode_over,
-                        lower_reward = lower_reward,
-                        master_action_index = master_action_index
-                        )
+                # if self.parameter.get("initial_symptom") is False or self.state_tracker.get_state()["turn"]==2:
+                self.record_training_sample(
+                    state=state,
+                    agent_action=lower_action_index,
+                    next_state=self.state_tracker.get_state(),
+                    reward=reward,
+                    episode_over=episode_over,
+                    lower_reward = lower_reward,
+                    master_action_index = master_action_index
+                    )
 
         # Output the dialogue.
         slots_proportion_list = []
@@ -1040,19 +1043,49 @@ class DialogueManager_HRL(object):
 
     def save_dl_model(self, model_performance, episodes_index, checkpoint_path=None):
         # Saving master agent
-        temp_checkpoint_path = os.path.join(checkpoint_path, 'classifier/')
+        # temp_checkpoint_path = os.path.join(checkpoint_path, 'classifier/')
+        # temp_checkpoint_pathG = os.path.join(checkpoint_path, 'classifierG/')
+        # temp_checkpoint_pathG1 = os.path.join(checkpoint_path, 'classifierG1/')
+        # temp_checkpoint_pathG4 = os.path.join(checkpoint_path, 'classifierG4/')
+        # temp_checkpoint_pathG5 = os.path.join(checkpoint_path, 'classifierG5/')
+        # temp_checkpoint_pathG6 = os.path.join(checkpoint_path, 'classifierG6/')
+        # temp_checkpoint_pathG7 = os.path.join(checkpoint_path, 'classifierG7/')
+        # temp_checkpoint_pathG12 = os.path.join(checkpoint_path, 'classifierG12/')
+        # temp_checkpoint_pathG13 = os.path.join(checkpoint_path, 'classifierG13/')
+        # temp_checkpoint_pathG14 = os.path.join(checkpoint_path, 'classifierG14/')
+        # temp_checkpoint_pathG19 = os.path.join(checkpoint_path, 'classifierG19/')
         temp_checkpoint_pathG = os.path.join(checkpoint_path, 'classifierG/')
+        if not os.path.exists(temp_checkpoint_pathG):
+            os.makedirs(temp_checkpoint_pathG)
         temp_checkpoint_pathG1 = os.path.join(checkpoint_path, 'classifierG1/')
+        if not os.path.exists(temp_checkpoint_pathG1):
+            os.makedirs(temp_checkpoint_pathG1)
         temp_checkpoint_pathG4 = os.path.join(checkpoint_path, 'classifierG4/')
+        if not os.path.exists(temp_checkpoint_pathG4):
+            os.makedirs(temp_checkpoint_pathG4)
         temp_checkpoint_pathG5 = os.path.join(checkpoint_path, 'classifierG5/')
+        if not os.path.exists(temp_checkpoint_pathG5):
+            os.makedirs(temp_checkpoint_pathG5)
         temp_checkpoint_pathG6 = os.path.join(checkpoint_path, 'classifierG6/')
+        if not os.path.exists(temp_checkpoint_pathG6):
+            os.makedirs(temp_checkpoint_pathG6)
         temp_checkpoint_pathG7 = os.path.join(checkpoint_path, 'classifierG7/')
+        if not os.path.exists(temp_checkpoint_pathG7):
+            os.makedirs(temp_checkpoint_pathG7)
         temp_checkpoint_pathG12 = os.path.join(checkpoint_path, 'classifierG12/')
+        if not os.path.exists(temp_checkpoint_pathG12):
+            os.makedirs(temp_checkpoint_pathG12)
         temp_checkpoint_pathG13 = os.path.join(checkpoint_path, 'classifierG13/')
+        if not os.path.exists(temp_checkpoint_pathG13):
+            os.makedirs(temp_checkpoint_pathG13)
         temp_checkpoint_pathG14 = os.path.join(checkpoint_path, 'classifierG14/')
+        if not os.path.exists(temp_checkpoint_pathG14):
+            os.makedirs(temp_checkpoint_pathG14)
         temp_checkpoint_pathG19 = os.path.join(checkpoint_path, 'classifierG19/')
+        if not os.path.exists(temp_checkpoint_pathG19):
+            os.makedirs(temp_checkpoint_pathG19)
 
-        #self.model.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_path)
+        # self.model.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_path)
         self.modelG.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG)
         self.modelG1.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG1)
         self.modelG4.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG4)
@@ -1063,13 +1096,6 @@ class DialogueManager_HRL(object):
         self.modelG13.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG13)
         self.modelG14.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG14)
         self.modelG19.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG19)
-
-
-
-
-
-
-
 
 
     def save_ml_model(self, model_performance, episodes_index, checkpoint_path=None):

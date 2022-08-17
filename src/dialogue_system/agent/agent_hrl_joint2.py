@@ -132,7 +132,7 @@ class AgentHRL_joint2(object):
             for label, agent in self.id2lowerAgent.items():
                 #print(temp_parameter[label])
                 # self.id2lowerAgent[label].dqn.restore_model(temp_parameter[label]['saved_model'])
-                self.id2lowerAgent[label].dqn.restore_model(parameter.get("checkpoint_path") + "/" + parameter.get("model_name") + "/lower/" + label +"/"+parameter.get("saved_model"))
+                self.id2lowerAgent[label].dqn.restore_model(parameter.get("checkpoint_path") + "/" + parameter.get("model_name") + "/agent/" + label +"/"+parameter.get("saved_model"))
                 self.id2lowerAgent[label].dqn.current_net.eval()
                 self.id2lowerAgent[label].dqn.target_net.eval()
 
@@ -166,6 +166,16 @@ class AgentHRL_joint2(object):
         self.subtask_turn = 0
         self.master_reward = 0
 
+    def revert_next(self, turn):
+        agent_action = {'action': 'inform', 'inform_slots': {"disease": 'UNK'}, 'request_slots': {},
+                        "explicit_inform_slots": {}, "implicit_inform_slots": {}}
+        agent_action["turn"] = turn
+        agent_action["inform_slots"] = {"disease": None}
+        agent_action["speaker"] = 'agent'
+        agent_action["action_index"] = None
+        self.subtask_terminal = True
+
+        return agent_action
     def next(self, state, turn, greedy_strategy, **kwargs):
         """
         Taking action based on different methods, e.g., DQN-based AgentDQN, rule-based AgentRule.
@@ -302,13 +312,28 @@ class AgentHRL_joint2(object):
 
     def save_model(self, model_performance, episodes_index, checkpoint_path=None):
         # Saving master agent
+        if not os.path.exists(checkpoint_path+"/master"):
+            os.makedirs(checkpoint_path+"/master")
         self.master.save_model(model_performance=model_performance, episodes_index=episodes_index,
-                               checkpoint_path=checkpoint_path)
+                               checkpoint_path=checkpoint_path+"/master")
         # Saving lower agent
+        if not os.path.exists(checkpoint_path+'/agent'):
+            os.makedirs(checkpoint_path+"/agent")
         for key, lower_agent in self.id2lowerAgent.items():
-            temp_checkpoint_path = os.path.join(checkpoint_path, 'lower/' + str(key))
+            temp_checkpoint_path = os.path.join(checkpoint_path, 'agent/' + str(key))
+
+            if not os.path.exists(temp_checkpoint_path):
+                os.makedirs(temp_checkpoint_path)
+
             lower_agent.dqn.save_model(model_performance=model_performance, episodes_index=episodes_index,
                                        checkpoint_path=temp_checkpoint_path)
+        # self.master.save_model(model_performance=model_performance, episodes_index=episodes_index,
+        #                        checkpoint_path=checkpoint_path)
+        # # Saving lower agent
+        # for key, lower_agent in self.id2lowerAgent.items():
+        #     temp_checkpoint_path = os.path.join(checkpoint_path, 'lower/' + str(key))
+        #     lower_agent.dqn.save_model(model_performance=model_performance, episodes_index=episodes_index,
+        #                                checkpoint_path=temp_checkpoint_path)
 
     def train_dqn(self):
         """
