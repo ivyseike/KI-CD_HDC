@@ -301,14 +301,29 @@ class AgentHRL_joint2(object):
             self.id2lowerAgent[key].update_target_network()
 
     def save_model(self, model_performance, episodes_index, checkpoint_path=None):
-        # Saving master agent
+        if not os.path.exists(checkpoint_path+"/master"):
+            os.makedirs(checkpoint_path+"/master")
         self.master.save_model(model_performance=model_performance, episodes_index=episodes_index,
-                               checkpoint_path=checkpoint_path)
+                               checkpoint_path=checkpoint_path+"/master")
         # Saving lower agent
+        if not os.path.exists(checkpoint_path+'/agent'):
+            os.makedirs(checkpoint_path+"/agent")
         for key, lower_agent in self.id2lowerAgent.items():
-            temp_checkpoint_path = os.path.join(checkpoint_path, 'lower/' + str(key))
+            temp_checkpoint_path = os.path.join(checkpoint_path, 'agent/' + str(key))
+
+            if not os.path.exists(temp_checkpoint_path):
+                os.makedirs(temp_checkpoint_path)
+
             lower_agent.dqn.save_model(model_performance=model_performance, episodes_index=episodes_index,
                                        checkpoint_path=temp_checkpoint_path)
+        # # Saving master agent
+        # self.master.save_model(model_performance=model_performance, episodes_index=episodes_index,
+        #                        checkpoint_path=checkpoint_path)
+        # # Saving lower agent
+        # for key, lower_agent in self.id2lowerAgent.items():
+        #     temp_checkpoint_path = os.path.join(checkpoint_path, 'agent/' + str(key))
+        #     lower_agent.dqn.save_model(model_performance=model_performance, episodes_index=episodes_index,
+        #                                checkpoint_path=temp_checkpoint_path)
 
     def train_dqn(self):
         """

@@ -168,10 +168,10 @@ class DialogueManager_HRL(object):
             action_type = 'return'
 
         if self.parameter.get("disease_as_action")==False:
-            if self.parameter.get("train_mode") == True:
-                condition = False
-            else:
-                condition = state['turn'] >= self.parameter.get("max_turn")
+            # if self.parameter.get("train_mode") == True:
+            #     condition = False
+            # else:
+            condition = state['turn'] >= self.parameter.get("max_turn")
             if action_type == "disease" or condition:# or lower_action in self.lower_action_history:
                 # print(state["turn"])
                 #once the action is repeated or the dialogue reach the max turn, then the classifier will output the predicted disease
@@ -1040,19 +1040,50 @@ class DialogueManager_HRL(object):
 
     def save_dl_model(self, model_performance, episodes_index, checkpoint_path=None):
         # Saving master agent
-        temp_checkpoint_path = os.path.join(checkpoint_path, 'classifier/')
-        temp_checkpoint_pathG = os.path.join(checkpoint_path, 'classifierG/')
-        temp_checkpoint_pathG1 = os.path.join(checkpoint_path, 'classifierG1/')
-        temp_checkpoint_pathG4 = os.path.join(checkpoint_path, 'classifierG4/')
-        temp_checkpoint_pathG5 = os.path.join(checkpoint_path, 'classifierG5/')
-        temp_checkpoint_pathG6 = os.path.join(checkpoint_path, 'classifierG6/')
-        temp_checkpoint_pathG7 = os.path.join(checkpoint_path, 'classifierG7/')
-        temp_checkpoint_pathG12 = os.path.join(checkpoint_path, 'classifierG12/')
-        temp_checkpoint_pathG13 = os.path.join(checkpoint_path, 'classifierG13/')
-        temp_checkpoint_pathG14 = os.path.join(checkpoint_path, 'classifierG14/')
-        temp_checkpoint_pathG19 = os.path.join(checkpoint_path, 'classifierG19/')
+        # temp_checkpoint_path = os.path.join(checkpoint_path, 'classifier/')
+        # temp_checkpoint_pathG = os.path.join(checkpoint_path, 'classifierG/')
+        # temp_checkpoint_pathG1 = os.path.join(checkpoint_path, 'classifierG1/')
+        # temp_checkpoint_pathG4 = os.path.join(checkpoint_path, 'classifierG4/')
+        # temp_checkpoint_pathG5 = os.path.join(checkpoint_path, 'classifierG5/')
+        # temp_checkpoint_pathG6 = os.path.join(checkpoint_path, 'classifierG6/')
+        # temp_checkpoint_pathG7 = os.path.join(checkpoint_path, 'classifierG7/')
+        # temp_checkpoint_pathG12 = os.path.join(checkpoint_path, 'classifierG12/')
+        # temp_checkpoint_pathG13 = os.path.join(checkpoint_path, 'classifierG13/')
+        # temp_checkpoint_pathG14 = os.path.join(checkpoint_path, 'classifierG14/')
+        # temp_checkpoint_pathG19 = os.path.join(checkpoint_path, 'classifierG19/')
 
         #self.model.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_path)
+        temp_checkpoint_pathG = os.path.join(checkpoint_path, 'classifierG/')
+        if not os.path.exists(temp_checkpoint_pathG):
+            os.makedirs(temp_checkpoint_pathG)
+        temp_checkpoint_pathG1 = os.path.join(checkpoint_path, 'classifierG1/')
+        if not os.path.exists(temp_checkpoint_pathG1):
+            os.makedirs(temp_checkpoint_pathG1)
+        temp_checkpoint_pathG4 = os.path.join(checkpoint_path, 'classifierG4/')
+        if not os.path.exists(temp_checkpoint_pathG4):
+            os.makedirs(temp_checkpoint_pathG4)
+        temp_checkpoint_pathG5 = os.path.join(checkpoint_path, 'classifierG5/')
+        if not os.path.exists(temp_checkpoint_pathG5):
+            os.makedirs(temp_checkpoint_pathG5)
+        temp_checkpoint_pathG6 = os.path.join(checkpoint_path, 'classifierG6/')
+        if not os.path.exists(temp_checkpoint_pathG6):
+            os.makedirs(temp_checkpoint_pathG6)
+        temp_checkpoint_pathG7 = os.path.join(checkpoint_path, 'classifierG7/')
+        if not os.path.exists(temp_checkpoint_pathG7):
+            os.makedirs(temp_checkpoint_pathG7)
+        temp_checkpoint_pathG12 = os.path.join(checkpoint_path, 'classifierG12/')
+        if not os.path.exists(temp_checkpoint_pathG12):
+            os.makedirs(temp_checkpoint_pathG12)
+        temp_checkpoint_pathG13 = os.path.join(checkpoint_path, 'classifierG13/')
+        if not os.path.exists(temp_checkpoint_pathG13):
+            os.makedirs(temp_checkpoint_pathG13)
+        temp_checkpoint_pathG14 = os.path.join(checkpoint_path, 'classifierG14/')
+        if not os.path.exists(temp_checkpoint_pathG14):
+            os.makedirs(temp_checkpoint_pathG14)
+        temp_checkpoint_pathG19 = os.path.join(checkpoint_path, 'classifierG19/')
+        if not os.path.exists(temp_checkpoint_pathG19):
+            os.makedirs(temp_checkpoint_pathG19)
+
         self.modelG.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG)
         self.modelG1.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG1)
         self.modelG4.save_model(model_performance=model_performance, episodes_index=episodes_index, checkpoint_path=temp_checkpoint_pathG4)

@@ -144,7 +144,7 @@ class User(object):
         agent_act_type = agent_action["action"]
         self.state["turn"] = turn
         if self.parameter.get("use_all_labels"):
-            temp_turn = self.max_turn + 20
+            temp_turn = self.max_turn
         else:
             temp_turn = self.max_turn - 2
         #if self.state["turn"] == (self.max_turn - 2):

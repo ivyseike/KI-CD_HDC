@@ -137,7 +137,7 @@ parser.add_argument("--use_all_labels", dest="use_all_labels", type=boolean_stri
 parser.add_argument('--file_all', dest="file_all", type=str, default=file0, help='the path for ten groups of diseases')
 parser.add_argument("--label_all_model_path", dest="label_all_model_path", type=str, default='./../../data/best_models_reduced')
 parser.add_argument("--initial_symptom", dest="initial_symptom", type=boolean_string, default=False, help="whether use initial symptom in HRL")
-parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="model/DQN/checkpoint", help="Saved Model")
+parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="/Users/yuchenqin/Documents/model/DQN/checkpoint", help="Saved Model")
 
 parser.add_argument("--introspect_enabled", dest="introspect_enabled", type=boolean_string, default=False, help="whether use introspection")
 parser.add_argument("--initial_threshold", dest="initial_threshold", type=float, default=0.45, help="whether use introspection")

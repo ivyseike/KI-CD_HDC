@@ -105,11 +105,17 @@ class RunningSteward(object):
                 self.dialogue_manager.state_tracker.agent.flush_pool()
                 self.simulation_epoch(epoch_size=self.epoch_size, index=index)
                 if save_model is True:
-                    self.dialogue_manager.state_tracker.agent.save_model(model_performance=result, episodes_index = index, checkpoint_path=self.checkpoint_path)
-                    if self.parameter.get("agent_id").lower() in ["agenthrljoint", "agenthrljoint2",'agentdqn']:
-                        self.dialogue_manager.save_dl_model(model_performance=result, episodes_index=index,
-                                                            checkpoint_path=self.checkpoint_path)
+                    if not os.path.exists(self.checkpoint_path + "/" + self.parameter["run_info"]):
+                        os.makedirs(self.checkpoint_path + "/" + self.parameter["run_info"])
+                    self.dialogue_manager.state_tracker.agent.save_model(model_performance=result, episodes_index = index, checkpoint_path=self.checkpoint_path + "/" + self.parameter["run_info"])
+                    self.dialogue_manager.save_dl_model(model_performance=result, episodes_index=index,
+                                                        checkpoint_path=self.checkpoint_path + "/" + self.parameter["run_info"])
                     print("###########################The model was saved.###################################")
+                    # self.dialogue_manager.state_tracker.agent.save_model(model_performance=result, episodes_index = index, checkpoint_path=self.checkpoint_path)
+                    # if self.parameter.get("agent_id").lower() in ["agenthrljoint", "agenthrljoint2",'agentdqn']:
+                    #     self.dialogue_manager.save_dl_model(model_performance=result, episodes_index=index,
+                    #                                         checkpoint_path=self.checkpoint_path)
+                    # print("###########################The model was saved.###################################")
                 else:
                     pass
                 self.best_result = copy.deepcopy(result)
