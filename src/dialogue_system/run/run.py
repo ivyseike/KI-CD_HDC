@@ -85,7 +85,7 @@ parser.add_argument("--disease_symptom", dest="disease_symptom", type=str,defaul
 parser.add_argument("--dsg", dest="dsg", type=str,default=file0+"/DSS.p",help="path and filename of the disease_symptom file")
 parser.add_argument("--max_turn", dest="max_turn", type=int, default=max_turn, help="the max turn in one episode.")
 parser.add_argument("--input_size_dqn", dest="input_size_dqn", type=int, default=1379, help="the input_size of DQN.")
-parser.add_argument("--pre_train", dest="pre_train", type=int, default=1, help="Whether you want pre trained weihjt or mot")
+parser.add_argument("--pre_train", dest="pre_train", type=int, default=0, help="Whether you want pre trained weihjt or mot")
 
 
 
@@ -139,7 +139,7 @@ parser.add_argument("--label_all_model_path", dest="label_all_model_path", type=
 parser.add_argument("--initial_symptom", dest="initial_symptom", type=boolean_string, default=False, help="whether use initial symptom in HRL")
 parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="/Users/yuchenqin/Documents/model/DQN/checkpoint", help="Saved Model")
 
-parser.add_argument("--introspect_enabled", dest="introspect_enabled", type=boolean_string, default=True, help="whether use introspection")
+parser.add_argument("--introspect_enabled", dest="introspect_enabled", type=boolean_string, default=False, help="whether use introspection")
 parser.add_argument("--initial_threshold_master", dest="initial_threshold_master", type=float, default=0.45, help="whether use introspection")
 parser.add_argument("--initial_threshold_worker", dest="initial_threshold_worker", type=float, default=0.45, help="whether use introspection")
 parser.add_argument("--polyak", dest="polyak", type=float, default=0.95, help="")
@@ -218,8 +218,8 @@ if __name__ == "__main__":
     torch.cuda.manual_seed(12345)
     torch.manual_seed(12345)
 
-    model_name = "0816012202_agenthrljoint2_T26_ss100_lr0.0005_RFS78_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.95_epsilon0.1_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0"
-    parameter["model_name"] = model_name
-    parameter["saved_model"] = 'model_d10agenthrljoint2_s0.473_r36.762_t16.63_mr0.075_mr2-0.196_e-979.pkl'
+    # model_name = "0816012202_agenthrljoint2_T26_ss100_lr0.0005_RFS78_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.95_epsilon0.1_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0"
+    # parameter["model_name"] = model_name
+    # parameter["saved_model"] = 'model_d10agenthrljoint2_s0.473_r36.762_t16.63_mr0.075_mr2-0.196_e-979.pkl'
 
     run(parameter=parameter)

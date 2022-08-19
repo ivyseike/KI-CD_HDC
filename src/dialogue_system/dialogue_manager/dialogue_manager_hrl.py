@@ -128,6 +128,17 @@ class DialogueManager_HRL(object):
 
         return e1 < self.dynamic_threshold_master and e2 < self.dynamic_threshold_worker
 
+    def calculate_entropy_with_state(self, state):
+        state_repA = self.current_state_representation(state)
+        Ys, pre_grp = self.modelG.predict([state_repA])
+        e1 = self.calculate_entropy(Ys)
+        inde = pre_grp[0]
+        pre_grp_l = self.grp[inde]
+        Ys2, pre_disease = self.dd(state,pre_grp_l)
+        e2 = self.calculate_entropy(Ys2)
+
+        return e2
+
     def next(self, greedy_strategy, save_record, index):
         """
         The next two turn of this dialogue session. The agent will take action first and then followed by user simulator.
@@ -140,6 +151,8 @@ class DialogueManager_HRL(object):
         lower_reward = 0
 
         state = self.state_tracker.get_state()
+        if state['turn'] == 0:
+            self.initial_entropy = self.calculate_entropy_with_state(state)
         group_id = self.state_tracker.user.goal["group_id"]
 
         self.master_action_space = self.state_tracker.agent.master_action_space
@@ -389,13 +402,18 @@ class DialogueManager_HRL(object):
                 )
             else:
                 # if self.parameter.get("initial_symptom") is False or self.state_tracker.get_state()["turn"]==2:
+                e1 = self.calculate_entropy_with_state(state)
+                e2 = self.calculate_entropy_with_state(self.state_tracker.get_state())
+                lower_reward_extra = self.parameter['max_turn'] * max(0, (e1-e2)/self.initial_entropy)
+                if lower_reward_extra > 0:
+                    print(lower_reward_extra)
                 self.record_training_sample(
                     state=state,
                     agent_action=lower_action_index,
                     next_state=self.state_tracker.get_state(),
                     reward=reward,
                     episode_over=episode_over,
-                    lower_reward = lower_reward,
+                    lower_reward = lower_reward+lower_reward_extra,
                     master_action_index = master_action_index
                     )
 
