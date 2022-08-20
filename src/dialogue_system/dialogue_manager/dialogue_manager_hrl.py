@@ -137,7 +137,7 @@ class DialogueManager_HRL(object):
         Ys2, pre_disease = self.dd(state,pre_grp_l)
         e2 = self.calculate_entropy(Ys2)
 
-        return e2
+        return e1, e2
 
     def next(self, greedy_strategy, save_record, index):
         """
@@ -152,7 +152,7 @@ class DialogueManager_HRL(object):
 
         state = self.state_tracker.get_state()
         if state['turn'] == 0:
-            self.initial_entropy = self.calculate_entropy_with_state(state)
+            self.initial_entropy_master, self.initial_entropy_worker = self.calculate_entropy_with_state(state)
         group_id = self.state_tracker.user.goal["group_id"]
 
         self.master_action_space = self.state_tracker.agent.master_action_space
@@ -402,16 +402,19 @@ class DialogueManager_HRL(object):
                 )
             else:
                 # if self.parameter.get("initial_symptom") is False or self.state_tracker.get_state()["turn"]==2:
-                e1 = self.calculate_entropy_with_state(state)
-                e2 = self.calculate_entropy_with_state(self.state_tracker.get_state())
-                lower_reward_extra = self.parameter['max_turn'] * max(0, (e1-e2)/self.initial_entropy)
+                e1_master, e1_worker = self.calculate_entropy_with_state(state)
+                e2_master, e2_worker = self.calculate_entropy_with_state(self.state_tracker.get_state())
+                master_reward_extra = self.parameter['max_turn'] * max(0, (e1_master-e2_master)/self.initial_entropy_master)
+                lower_reward_extra = self.parameter['max_turn'] * max(0, (e1_worker-e2_worker)/self.initial_entropy_worker)
                 if lower_reward_extra > 0:
-                    print(lower_reward_extra)
+                    print("worker:" + lower_reward_extra)
+                if master_reward_extra > 0:
+                    print("master:" + master_reward_extra)
                 self.record_training_sample(
                     state=state,
                     agent_action=lower_action_index,
                     next_state=self.state_tracker.get_state(),
-                    reward=reward,
+                    reward=reward+master_reward_extra,
                     episode_over=episode_over,
                     lower_reward = lower_reward+lower_reward_extra,
                     master_action_index = master_action_index
