@@ -126,8 +126,8 @@ class RunningSteward(object):
             self.dialogue_manager.state_tracker.agent.save_model(model_performance=result, episodes_index=index, checkpoint_path=self.checkpoint_path)
             if self.parameter.get("agent_id").lower() in ["agenthrljoint2"]:
                 self.dialogue_manager.save_dl_model(model_performance=result, episodes_index=index, checkpoint_path=self.checkpoint_path)
-        if save_performance is True and train_mode is True and epoch_number > 0:
-            self.__dump_performance__(epoch_index=index)
+        # if save_performance is True and train_mode is True and epoch_number > 0:
+        #     self.__dump_performance__(epoch_index=index)
 
 
 
@@ -278,8 +278,8 @@ class RunningSteward(object):
             #self.dialogue_manager.train_machine_learning_classifier(epochs=20)
         res['DiseaseClassifier_Accuracy'] = acc
 
-        if index % 1000 == 999 and save_performance == True:
-            self.__dump_performance__(epoch_index=index)
+        # if index % 1000 == 999 and save_performance == True:
+        #     self.__dump_performance__(epoch_index=index)
         print("%3d simulation SR [%s], ave reward %s, ave turns %s, ave match rate %s, ave match rate2 %s, ave repeated %s" % (index,res['success_rate'],res['average_reward'], res['average_turn'], res["average_match_rate"],res[ "average_match_rate2"],res["average_repeated_action"]))
 
         if self.parameter.get("use_all_labels") == True and self.parameter.get("disease_as_action") == False:
