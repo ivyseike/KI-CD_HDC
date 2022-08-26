@@ -41,9 +41,9 @@ disease_number = 10
 parser = argparse.ArgumentParser()
 parser.add_argument("--disease_number", dest="disease_number", type=int,default=disease_number,help="the number of disease.")
 # simulation configuration
-parser.add_argument("--simulate_epoch_number", dest="simulate_epoch_number", type=int, default=1, help="The number of simulate epoch.")
+parser.add_argument("--simulate_epoch_number", dest="simulate_epoch_number", type=int, default=5, help="The number of simulate epoch.")
 parser.add_argument("--simulation_size", dest="simulation_size", type=int, default=100, help="The number of simulated sessions in each simulated epoch.")
-parser.add_argument("--evaluate_session_number", dest="evaluate_session_number", type=int, default=6000, help="the size of each simulate epoch when evaluation.")
+parser.add_argument("--evaluate_session_number", dest="evaluate_session_number", type=int, default=1000, help="the size of each simulate epoch when evaluation.")
 parser.add_argument("--experience_replay_pool_size", dest="experience_replay_pool_size", type=int, default=10000, help="the size of experience replay.")
 parser.add_argument("--hidden_size_dqn", dest="hidden_size_dqn", type=int, default=512, help="the hidden_size of DQN.")
 parser.add_argument("--warm_start", dest="warm_start",type=boolean_string, default=False, help="Filling the replay buffer with the experiences of rule-based agents. {True, False}")
@@ -236,13 +236,13 @@ def run(parameter):
             DC = DC + [res['DiseaseClassifier_Accuracy']]
 
         pickle.dump(obj = out, file = open('res.p', 'wb'), protocol = 2)
-        # s_r /= 5
-        # m_r /= 5
-        # r_a /= 5
-        # m_r_2 /= 5
-        # r /= 5
-        # t /= 5
-        # acc /= 5
+        s_r /= 5
+        m_r /= 5
+        r_a /= 5
+        m_r_2 /= 5
+        r /= 5
+        t /= 5
+        acc /= 5
         print(s_r)
         print(m_r)
         print(m_r_2)
@@ -286,15 +286,16 @@ if __name__ == "__main__":
     agent_id = 'agenthrljoint2'
     params['agent_id'] = agent_id
     # date_time_list = ['0619155315']
-    model_name = "0809170113_agenthrljoint2_T28_ss100_lr0.0005_RFS84_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.9_epsilon0.05_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0" #original KI-CD_HDC model with original max_turn
-    parameter["model_name"] = model_name
+    # model_name = "0809170113_agenthrljoint2_T28_ss100_lr0.0005_RFS84_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.9_epsilon0.05_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0" #original KI-CD_HDC model with original max_turn
+    parameter["model_name"] = 'original_max_turn_28'
     # result_file = 'test_result.txt'
     # FileIO.writeToFile('\n\n' + '**'*30, result_file)
     # FileIO.writeToFile(agent_id, result_file)
     # FileIO.writeToFile('**'*30 + '\n' , result_file)
     # for name in os.listdir("/Users/yuchenqin/Documents/model/DQN/checkpoint/"+model_name+"/master/"):
-    #     # print(name)
-    parameter["saved_model"] = 'model_d10agenthrljoint2_s0.621_r51.768_t37.222_mr0.086_mr2-0.499_e-3201.pkl'
+    #     # print(name)False
+    parameter['saved_model'] = 'model_d10agenthrljoint2_s0.621_r51.768_t37.222_mr0.086_mr2-0.499_e-3201.pkl'
+    # parameter["saved_model"] = 'model_d10agenthrljoint2_s0.621_r51.768_t37.222_mr0.086_mr2-0.499_e-3201.pkl'
         # parameter["saved_model"] = name
     result = run(parameter=parameter)
 
