@@ -41,9 +41,9 @@ disease_number = 10
 parser = argparse.ArgumentParser()
 parser.add_argument("--disease_number", dest="disease_number", type=int,default=disease_number,help="the number of disease.")
 # simulation configuration
-parser.add_argument("--simulate_epoch_number", dest="simulate_epoch_number", type=int, default=1, help="The number of simulate epoch.")
+parser.add_argument("--simulate_epoch_number", dest="simulate_epoch_number", type=int, default=5, help="The number of simulate epoch.")
 parser.add_argument("--simulation_size", dest="simulation_size", type=int, default=100, help="The number of simulated sessions in each simulated epoch.")
-parser.add_argument("--evaluate_session_number", dest="evaluate_session_number", type=int, default=6000, help="the size of each simulate epoch when evaluation.")
+parser.add_argument("--evaluate_session_number", dest="evaluate_session_number", type=int, default=1000, help="the size of each simulate epoch when evaluation.")
 parser.add_argument("--experience_replay_pool_size", dest="experience_replay_pool_size", type=int, default=10000, help="the size of experience replay.")
 parser.add_argument("--hidden_size_dqn", dest="hidden_size_dqn", type=int, default=512, help="the hidden_size of DQN.")
 parser.add_argument("--warm_start", dest="warm_start",type=boolean_string, default=False, help="Filling the replay buffer with the experiences of rule-based agents. {True, False}")
@@ -142,6 +142,15 @@ parser.add_argument("--lower_bound_critic", dest="lower_bound_critic", type=floa
 parser.add_argument("--is_relational_dqn", dest='is_relational_dqn', type=boolean_string, default=False, help="Using relational DQN? {True, False}")
 parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="/Users/yuchenqin/Documents/model/DQN/checkpoint", help="Saved Model")
 
+parser.add_argument("--introspect_enabled", dest="introspect_enabled", type=boolean_string, default=False, help="whether use introspection")
+parser.add_argument("--initial_threshold_master", dest="initial_threshold_master", type=float, default=0.45, help="whether use introspection")
+parser.add_argument("--initial_threshold_worker", dest="initial_threshold_worker", type=float, default=0.45, help="whether use introspection")
+parser.add_argument("--polyak", dest="polyak", type=float, default=0.95, help="")
+
+parser.add_argument("--worker_kg_enabled", dest="worker_kg_enabled", type=boolean_string, default=False)
+parser.add_argument("--master_reward_extra_enabled", dest="master_reward_extra_enabled", type=boolean_string, default=False)
+parser.add_argument("--worker_reward_extra_enabled", dest="worker_reward_extra_enabled", type=boolean_string, default=True)
+
 
 args = parser.parse_args()
 parameter = vars(args)
@@ -216,7 +225,8 @@ def run(parameter):
         T = []
         DC = []
         for index in range(simulate_epoch_number):
-            RN = random.randint(0,100)
+            # RN = random.randint(0,100)
+            RN = 12345
             torch.cuda.manual_seed(RN)
             torch.manual_seed(RN)
             res = steward.evaluate_model(dataset='test', index=index)
@@ -236,13 +246,13 @@ def run(parameter):
             DC = DC + [res['DiseaseClassifier_Accuracy']]
 
         pickle.dump(obj = out, file = open('res.p', 'wb'), protocol = 2)
-        # s_r /= 5
-        # m_r /= 5
-        # r_a /= 5
-        # m_r_2 /= 5
-        # r /= 5
-        # t /= 5
-        # acc /= 5
+        s_r /= 5
+        m_r /= 5
+        r_a /= 5
+        m_r_2 /= 5
+        r /= 5
+        t /= 5
+        acc /= 5
         print(s_r)
         print(m_r)
         print(m_r_2)
@@ -286,7 +296,10 @@ if __name__ == "__main__":
     agent_id = 'agenthrljoint2'
     params['agent_id'] = agent_id
     # date_time_list = ['0619155315']
-    model_name = "0809170113_agenthrljoint2_T28_ss100_lr0.0005_RFS84_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.9_epsilon0.05_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0" #original KI-CD_HDC model with original max_turn
+    # model_name = '0821203619_agenthrljoint2_T26_ss100_lr0.0005_RFS78_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.95_epsilon0.1_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0_worker_and_master_reward'
+    model_name = '0821141043_agenthrljoint2_T26_ss100_lr0.0005_RFS78_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.95_epsilon0.1_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0_only_worker_reward'
+    # model_name = '0824152850_agenthrljoint2_T26_ss100_lr0.0005_RFS78_RFF0_RFNCY0_RFIRS0_RFRA-44_RFRMT-66_mls0_gamma0.95_gammaW0.95_epsilon0.1_awd0_crs0_hwg0_wc0_var0_sdai0_wfrs44_dtft0_ird0_ubc0.985_lbc1e-10_data_RID0'
+    # model_name = 'original_max_turn_28'
     parameter["model_name"] = model_name
     # result_file = 'test_result.txt'
     # FileIO.writeToFile('\n\n' + '**'*30, result_file)
@@ -294,8 +307,11 @@ if __name__ == "__main__":
     # FileIO.writeToFile('**'*30 + '\n' , result_file)
     # for name in os.listdir("/Users/yuchenqin/Documents/model/DQN/checkpoint/"+model_name+"/master/"):
     #     # print(name)
-    parameter["saved_model"] = 'model_d10agenthrljoint2_s0.621_r51.768_t37.222_mr0.086_mr2-0.499_e-3201.pkl'
-        # parameter["saved_model"] = name
+    # saved_model = 'model_d10agenthrljoint2_s0.581_r44.592_t19.59_mr0.133_mr2-0.395_e-4424.pkl'
+    saved_model = 'model_d10agenthrljoint2_s0.575_r44.652_t19.08_mr0.123_mr2-0.351_e-3164.pkl'
+    # saved_model = 'model_d10agenthrljoint2_s0.563_r43.65_t18.688_mr0.133_mr2-0.371_e-3772.pkl'
+    # saved_model = 'model_d10agenthrljoint2_s0.621_r51.768_t37.222_mr0.086_mr2-0.499_e-3201.pkl'
+    parameter["saved_model"] = saved_model        # parameter["saved_model"] = name
     result = run(parameter=parameter)
 
 

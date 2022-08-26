@@ -406,18 +406,23 @@ class DialogueManager_HRL(object):
                 e2_master, e2_worker = self.calculate_entropy_with_state(self.state_tracker.get_state())
                 master_reward_extra = self.parameter['max_turn'] * max(0, (e1_master-e2_master)/self.initial_entropy_master)
                 lower_reward_extra = self.parameter['max_turn'] * max(0, (e1_worker-e2_worker)/self.initial_entropy_worker)
-                if lower_reward_extra > 0:
-                    print("worker:" + str(lower_reward_extra))
-                if master_reward_extra > 0:
-                    print("master:" + str(master_reward_extra))
+                master_reward = reward
+                worker_reward = lower_reward
+                if self.parameter['master_reward_extra_enabled']:
+                    master_reward += master_reward_extra
+                    if master_reward > 0:
+                        print("master:" + str(master_reward))
+                if self.parameter['worker_reward_extra_enabled']:
+                    worker_reward += lower_reward_extra
+                    if worker_reward > 0:
+                        print("worker:" + str(worker_reward))
                 self.record_training_sample(
                     state=state,
                     agent_action=lower_action_index,
                     next_state=self.state_tracker.get_state(),
-                    # reward=reward,
-                    reward=reward+master_reward_extra,
+                    reward=master_reward,
                     episode_over=episode_over,
-                    lower_reward = lower_reward+lower_reward_extra,
+                    lower_reward = worker_reward,
                     master_action_index = master_action_index
                     )
 
