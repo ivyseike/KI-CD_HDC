@@ -194,10 +194,10 @@ class DialogueManager_HRL(object):
             action_type = 'return'
 
         if self.parameter.get("disease_as_action")==False:
-            # if self.parameter.get("train_mode") == True:
-            #     condition = False
-            # else:
-            condition = state['turn'] >= self.parameter.get("max_turn")
+            if self.parameter.get("train_mode") == True:
+                condition = False
+            else:
+                condition = state['turn'] >= self.parameter.get("max_turn")
             if action_type == "disease" or condition:# or lower_action in self.lower_action_history:
                 # print(state["turn"])
                 #once the action is repeated or the dialogue reach the max turn, then the classifier will output the predicted disease

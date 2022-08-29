@@ -74,8 +74,7 @@ parser.add_argument("--implicit_number", dest="implicit_number", type=int, defau
 
 
 # goal set, slot set, action set.
-max_turn = 26  #(Intial 22)
-max_turn_reward = 28
+max_turn = 28  #(Intial 22)
 #file0='./../../data/simulated/label13'
 file0='Data/'
 parser.add_argument("--GA", dest="GA", type=str, default=file0+'/GA.p',help='path and filename of the action set')
@@ -96,9 +95,9 @@ parser.add_argument("--reward_for_success", dest="reward_for_success", type=floa
 parser.add_argument("--reward_for_fail", dest="reward_for_fail", type=float,default=0)
 parser.add_argument("--reward_for_inform_right_symptom", dest="reward_for_inform_right_symptom", type=float,default=0)
 parser.add_argument("--minus_left_slots", dest="minus_left_slots", type=boolean_string, default=False,help="Success reward minus the number of left slots as the final reward for a successful session.{True, False}")
-parser.add_argument("--reward_for_reach_max_turn", dest="reward_for_reach_max_turn", type=float, default=-3*max_turn)
-parser.add_argument("--reward_for_repeated_action", dest='reward_for_repeated_action', type=float, default= -2*max_turn, help='the reward for repeated action')
-parser.add_argument("--weight_for_reward_shaping", dest='weight_for_reward_shaping', type=float, default=2*max_turn, help="weight for reward shaping. 0 means no reward shaping.")
+parser.add_argument("--reward_for_reach_max_turn", dest="reward_for_reach_max_turn", type=float, default=-66)
+parser.add_argument("--reward_for_repeated_action", dest='reward_for_repeated_action', type=float, default= -44, help='the reward for repeated action')
+parser.add_argument("--weight_for_reward_shaping", dest='weight_for_reward_shaping', type=float, default=44, help="weight for reward shaping. 0 means no reward shaping.")
 
 # agent to use and DQN setting.
 # parser.add_argument("--agent_id", dest="agent_id", type=str, default='AgentDQN', help="The agent to be used:[AgentRule, AgentDQN, AgentRandom, AgentHRL, AgentHRLGoal]")
@@ -138,7 +137,8 @@ parser.add_argument("--use_all_labels", dest="use_all_labels", type=boolean_stri
 parser.add_argument('--file_all', dest="file_all", type=str, default=file0, help='the path for ten groups of diseases')
 parser.add_argument("--label_all_model_path", dest="label_all_model_path", type=str, default='./../../data/best_models_reduced')
 parser.add_argument("--initial_symptom", dest="initial_symptom", type=boolean_string, default=False, help="whether use initial symptom in HRL")
-parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="/Users/yuchenqin/Documents/model/DQN/checkpoint", help="Saved Model")
+# parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="/Users/yuchenqin/Documents/model/DQN/checkpoint", help="Saved Model")
+parser.add_argument("--checkpoint_path", dest="checkpoint_path", type=str, default="/home/ivyseike/KI-CD_HDC/model/DQN/checkpoint", help="Saved Model")
 
 parser.add_argument("--introspect_enabled", dest="introspect_enabled", type=boolean_string, default=False, help="whether use introspection")
 parser.add_argument("--initial_threshold_master", dest="initial_threshold_master", type=float, default=0.45, help="whether use introspection")
@@ -146,6 +146,8 @@ parser.add_argument("--initial_threshold_worker", dest="initial_threshold_worker
 parser.add_argument("--polyak", dest="polyak", type=float, default=0.95, help="")
 
 parser.add_argument("--worker_kg_enabled", dest="worker_kg_enabled", type=boolean_string, default=False)
+parser.add_argument("--master_reward_extra_enabled", dest="master_reward_extra_enabled", type=boolean_string, default=True)
+parser.add_argument("--worker_reward_extra_enabled", dest="worker_reward_extra_enabled", type=boolean_string, default=True)
 
 
 args = parser.parse_args()

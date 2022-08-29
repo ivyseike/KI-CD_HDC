@@ -93,7 +93,7 @@ class RunningSteward(object):
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 writer.add_scalar('result/success_rate', torch.tensor(result['success_rate'], device=device), index)
                 writer.add_scalar('result/ave_reward', torch.tensor(result['average_reward'], device=device), index)
-                writer.add_scalar('result/ave_turns', torch.tensor(result['average_turn'], device=device), index)
+                writer.add_scalar('result/ave_turns', torch.tensor(result['average_turn']/2, device=device), index)
                 writer.add_scalar('result/ave_match_rate', torch.tensor(result['average_match_rate'], device=device), index)
                 writer.add_scalar('result/ave_match_rate2', torch.tensor(result['average_match_rate2'], device=device), index)
                 if self.parameter['introspect_enabled']:
